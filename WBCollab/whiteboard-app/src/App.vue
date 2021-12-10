@@ -13,6 +13,25 @@
 <script>
 export default {
   name: "App",
+  sockets: {
+    connect: function() {
+      console.log('socket connected')
+    },
+    'canvas-data': function (data) {
+            var image = new Image();
+            var canvas = this.$refs.canvas;
+            var ctx = canvas.getContext('2d');
+            image.onload = function() {
+              ctx.drawImage(image, 0, 0);
+            };
+            image.src = data;
+    }
+  },
+  data: function() {
+      return {
+        timeout: undefined
+      }
+  },
   methods: {
     drawOnCanvas() {
       var canvas = this.$refs.canvas;
@@ -50,12 +69,19 @@ export default {
           canvas.removeEventListener('mousemove', onPaint, false);
       }, false);
 
+      var root = this;
       var onPaint = function() {
           ctx.beginPath();
           ctx.moveTo(last_mouse.x, last_mouse.y);
           ctx.lineTo(mouse.x, mouse.y);
           ctx.closePath();
           ctx.stroke();
+          
+          if(root.$data.timeout != undefined) clearTimeout(root.$data.timeout);
+          root.$data.timeout = setTimeout(function() {
+            var base64ImageData = canvas.toDataURL("image/png");
+            root.$socket.emit('canvas-data', base64ImageData)
+          }, 1)
       };
     }
   },
