@@ -1,12 +1,47 @@
 <template>
-  <div
-    ref="sketch"
-    id="sketch"
-  >
-    <canvas
-      ref="canvas"
-      id="canvas"
-    ></canvas>
+
+  
+  <div 
+    ref="container"
+    id="container"
+  >  
+    <div 
+      ref="appli"
+      id="appli"
+      v-if="userNameEntered()"
+    >
+      <ul 
+        ref="student-list"
+        id="student-list"
+      >
+        <li v-for="(value, name) in usersTable" :key="name" :style="{color: colorTable[name]}">
+          {{ value }}
+        </li>
+      </ul>
+      <div
+        ref="sketch"
+        id="sketch"
+      >
+        <canvas
+          ref="canvas"
+          id="draw-canvas"
+        ></canvas>
+        <canvas
+          ref="cursorCanvas"
+          id="cursor-canvas"
+        ></canvas>
+      </div>
+      
+    </div>
+    <div 
+      ref="pop-up"
+      id="pop-up"
+      v-else
+    >
+      Enter Username
+      <input ref="user-name-input" id="user-name-input" type="text" v-model="tempUsername"/>
+      <button ref="user-name-button" id="user-name-button" @click="assignUsername()">Submit</button>
+    </div>
   </div>
 </template>
 
@@ -18,30 +53,91 @@ export default {
       console.log('socket connected')
     },
     'canvas-data': function (data) {
-            var image = new Image();
-            var canvas = this.$refs.canvas;
-            var ctx = canvas.getContext('2d');
-            image.onload = function() {
-              ctx.drawImage(image, 0, 0);
-            };
-            image.src = data;
+      var image = new Image();
+      var canvas = this.$refs.canvas;
+      var ctx = canvas.getContext('2d');
+      image.onload = function() {
+        ctx.drawImage(image, 0, 0);
+      };
+      image.src = data;
+    },
+    'update-users-table': function (data) {
+      this.$data.usersTable = data;
+      for(var key in data) {
+        this.$data.colorTable[key] = this.stringToHslColor(data[key]);
+        console.log(this.$data.colorTable[key]);
+      }
+    },
+    'update-cursor-table': function (data) {
+      this.$data.cursorTable = data;
+      
+      var cursorCanvas = this.$refs.cursorCanvas;
+      var cursorCTX = cursorCanvas.getContext('2d');
+
+      var sketch = this.$refs.sketch;
+      var sketch_style = getComputedStyle(sketch);
+
+      cursorCanvas.width = parseInt(sketch_style.getPropertyValue('width'));
+      cursorCanvas.height = parseInt(sketch_style.getPropertyValue('height'));
+
+      cursorCTX.clearRect(0, 0, cursorCanvas.width, cursorCanvas.height);
+      
+
+      for(var key in this.$data.cursorTable) {
+
+        cursorCTX.fillStyle = this.$data.colorTable[key];
+        console.log(cursorCTX.fillStyle);
+        cursorCTX.beginPath();
+        cursorCTX.arc(this.$data.cursorTable[key].x, this.$data.cursorTable[key].y, 5, 0, 2*Math.PI);
+        cursorCTX.fill();
+      }
+
     }
   },
   data: function() {
       return {
-        timeout: undefined
+        colorTable: {},
+        cursorTable: {},
+        usersTable: {},
+        tempUsername: null,
+        username: null,
+        timeout: undefined,
+        cursorTimeout: undefined
       }
   },
   methods: {
+    userNameEntered() {
+      return this.$data.username != null;
+    },
+    assignUsername() {
+      if(this.$data.tempUsername != null) { 
+        this.$data.username = this.$data.tempUsername;
+        this.$socket.emit("username-submit", this.$data.username);
+      }
+    },
+    stringToHslColor(str) {
+      var hash = 0;
+      for (var i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+      }
+
+      var h = hash % 360;
+      var s = 80;
+      var l = 40;
+      return 'hsl('+h+', '+s+'%, '+l+'%)';
+    },
     drawOnCanvas() {
+      
+      var root = this;
+
       var canvas = this.$refs.canvas;
       var ctx = canvas.getContext('2d');
 
+      
       var sketch = this.$refs.sketch;
       var sketch_style = getComputedStyle(sketch);
       canvas.width = parseInt(sketch_style.getPropertyValue('width'));
       canvas.height = parseInt(sketch_style.getPropertyValue('height'));
-
       var mouse = {x: 0, y: 0};
       var last_mouse = {x: 0, y: 0};
 
@@ -50,8 +146,14 @@ export default {
           last_mouse.x = mouse.x;
           last_mouse.y = mouse.y;
 
-          mouse.x = e.pageX - this.offsetLeft;
-          mouse.y = e.pageY - this.offsetTop;
+          mouse.x = e.pageX - sketch.offsetLeft;
+          mouse.y = e.pageY - sketch.offsetTop;
+
+          if(root.$data.cursorTimeout != undefined) clearTimeout(root.$data.cursorTimeout);
+          root.$data.cursorTimeout = setTimeout(function() {
+            root.$socket.emit('cursor-data', mouse);
+          }, 10);
+
       }, false);
 
 
@@ -69,7 +171,6 @@ export default {
           canvas.removeEventListener('mousemove', onPaint, false);
       }, false);
 
-      var root = this;
       var onPaint = function() {
           ctx.beginPath();
           ctx.moveTo(last_mouse.x, last_mouse.y);
@@ -85,21 +186,34 @@ export default {
       };
     }
   },
-  mounted() {
-    this.drawOnCanvas();
+  updated() {
+    if(this.userNameEntered()) this.drawOnCanvas();
   }
 };
 </script>
 
 <style scoped>
-#canvas {
-  border: 1px solid black;
-  width: 100%;
-  height: 100%;
-}
-#sketch {
-  height: 66%;
-  width: 56%;
-  margin: 0 auto;
-}
+  #draw-canvas {
+    border: 2px solid black;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1280px;
+    height: 720px;
+    z-index: 1;
+  }
+  #sketch {
+    position: fixed;
+    height: 720px;
+    width: 1280px;
+    margin: 0 auto;
+  }
+  #cursor-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1280px;
+    height: 720px;
+    z-index: 0;
+  }
 </style>
