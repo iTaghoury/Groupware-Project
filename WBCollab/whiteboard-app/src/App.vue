@@ -1,23 +1,29 @@
 <template>
-
-  
   <div 
     ref="container"
     id="container"
   >  
+    <div
+      ref="kicked"
+      id="kicked"
+      v-if="kicked"
+      >
+      <h1>You have been kicked by {{ kicked }}</h1>
+    </div>
     <div 
       ref="appli"
       id="appli"
-      v-if="userNameEntered()"
+      v-else-if="userNameEntered()"
     >
       <ul 
         ref="student-list"
         id="student-list"
       >
-        <li v-for="(value, name) in usersTable" :key="name" :style="{color: colorTable[name]}">
+        <li v-for="(value, name) in usersTable" :key="name" :style="{color: colorTable[name]}" @click="kick(name)">
           {{ value }}
         </li>
       </ul>
+      <button @click="clearCanvas(true)">Clear canvas</button>
       <div
         ref="sketch"
         id="sketch"
@@ -31,7 +37,6 @@
           id="cursor-canvas"
         ></canvas>
       </div>
-      
     </div>
     <div 
       ref="pop-up"
@@ -65,33 +70,39 @@ export default {
       this.$data.usersTable = data;
       for(var key in data) {
         this.$data.colorTable[key] = this.stringToHslColor(data[key]);
-        console.log(this.$data.colorTable[key]);
       }
     },
     'update-cursor-table': function (data) {
-      this.$data.cursorTable = data;
-      
-      var cursorCanvas = this.$refs.cursorCanvas;
-      var cursorCTX = cursorCanvas.getContext('2d');
+      if(this.userNameEntered()) {
+        this.$data.cursorTable = data;
+        
+        var cursorCanvas = this.$refs.cursorCanvas;
+        var cursorCTX = cursorCanvas.getContext('2d');
 
-      var sketch = this.$refs.sketch;
-      var sketch_style = getComputedStyle(sketch);
+        var sketch = this.$refs.sketch;
+        var sketch_style = getComputedStyle(sketch);
 
-      cursorCanvas.width = parseInt(sketch_style.getPropertyValue('width'));
-      cursorCanvas.height = parseInt(sketch_style.getPropertyValue('height'));
+        cursorCanvas.width = parseInt(sketch_style.getPropertyValue('width'));
+        cursorCanvas.height = parseInt(sketch_style.getPropertyValue('height'));
 
-      cursorCTX.clearRect(0, 0, cursorCanvas.width, cursorCanvas.height);
-      
+        cursorCTX.clearRect(0, 0, cursorCanvas.width, cursorCanvas.height);
+        
 
-      for(var key in this.$data.cursorTable) {
+        for(var key in this.$data.cursorTable) {
 
-        cursorCTX.fillStyle = this.$data.colorTable[key];
-        console.log(cursorCTX.fillStyle);
-        cursorCTX.beginPath();
-        cursorCTX.arc(this.$data.cursorTable[key].x, this.$data.cursorTable[key].y, 5, 0, 2*Math.PI);
-        cursorCTX.fill();
+          cursorCTX.fillStyle = this.$data.colorTable[key];
+          cursorCTX.beginPath();
+          cursorCTX.arc(this.$data.cursorTable[key].x, this.$data.cursorTable[key].y, 5, 0, 2*Math.PI);
+          cursorCTX.fill();
+        }
       }
-
+    },
+    'kicked': function (data) {
+      this.$data.username = null;
+      this.$data.kicked = data;
+    },
+    'clear-canvas': function() {
+      this.clearCanvas(false);
     }
   },
   data: function() {
@@ -102,10 +113,21 @@ export default {
         tempUsername: null,
         username: null,
         timeout: undefined,
-        cursorTimeout: undefined
+        cursorTimeout: undefined,
+        kicked: null,
+        drawOnCanvasCalled: false
       }
   },
   methods: {
+    clearCanvas(emit) {
+      var canvas = this.$refs.canvas;
+      var ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if(emit) this.$socket.emit('clear-canvas');
+    },
+    kick(socketID) {
+      this.$socket.emit('kick-request', socketID);
+    },
     userNameEntered() {
       return this.$data.username != null;
     },
@@ -181,13 +203,16 @@ export default {
           if(root.$data.timeout != undefined) clearTimeout(root.$data.timeout);
           root.$data.timeout = setTimeout(function() {
             var base64ImageData = canvas.toDataURL("image/png");
-            root.$socket.emit('canvas-data', base64ImageData)
+            root.$socket.emit('canvas-data', base64ImageData);
           }, 1)
       };
     }
   },
   updated() {
-    if(this.userNameEntered()) this.drawOnCanvas();
+    if(this.userNameEntered() && !this.$data.drawOnCanvasCalled) {
+      this.drawOnCanvas();
+      this.$data.drawOnCanvasCalled = true;
+    }
   }
 };
 </script>
@@ -204,8 +229,8 @@ export default {
   }
   #sketch {
     position: fixed;
-    height: 720px;
     width: 1280px;
+    height: 720px;
     margin: 0 auto;
   }
   #cursor-canvas {
