@@ -2,6 +2,7 @@
   <div 
     ref="container"
     id="container"
+    class="container"
   >  
     <div
       ref="kicked"
@@ -23,7 +24,7 @@
           {{ value }}
         </li>
       </ul>
-      <button @click="clearCanvas(true)">Clear canvas</button>
+      <button class="clear-button" @click="clearCanvas(true)">Clear canvas</button>
       <div
         ref="sketch"
         id="sketch"
@@ -41,11 +42,19 @@
     <div 
       ref="pop-up"
       id="pop-up"
+      class="pop-up"
       v-else
     >
-      Enter Username
-      <input ref="user-name-input" id="user-name-input" type="text" v-model="tempUsername"/>
-      <button ref="user-name-button" id="user-name-button" @click="assignUsername()">Submit</button>
+      <a class="button" href="#popup1">Join the session</a>
+    </div>
+    <div id="popup1" class="overlay">
+      <div class="popup">
+        <h2>Enter Username</h2>
+        <div class="content">
+          <input ref="user-name-input" id="user-name-input" type="text" v-model="tempUsername"/>
+          <button ref="user-name-button" id="user-name-button" class="button" @click="assignUsername()"><a class="submit-link" href="#">Submit</a></button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -208,6 +217,9 @@ export default {
       };
     }
   },
+  mounted() {
+    document.body.classList.add('app-body')
+  },
   updated() {
     if(this.userNameEntered() && !this.$data.drawOnCanvasCalled) {
       this.drawOnCanvas();
@@ -218,6 +230,11 @@ export default {
 </script>
 
 <style scoped>
+
+  .container {
+    font-family: Arial, Helvetica, sans-serif;
+    align-content: center;
+  }  
   #draw-canvas {
     border: 2px solid black;
     position: absolute;
@@ -240,5 +257,99 @@ export default {
     width: 1280px;
     height: 720px;
     z-index: 0;
+  }
+
+  .button {
+    font-size: 1em;
+    padding: 10px;
+    color: #540781dc;
+    border: 2px solid #540781dc;
+    border-radius: 20px/50px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease-out;
+  }
+  .button:hover {
+    background: #540781dc;
+    color: white;
+  }
+
+  .overlay {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.7);
+    transition: opacity 500ms;
+    visibility: hidden;
+    opacity: 0;
+  }
+  .overlay:target {
+    visibility: visible;
+    opacity: 1;
+  }
+
+  .popup {
+    margin: 70px auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 5px;
+    width: 30%;
+    position: relative;
+    transition: all 5s ease-in-out;
+  }
+
+  .popup h2 {
+    margin-top: 0;
+    color: #333;
+    font-family: Tahoma, Arial, sans-serif;
+  }
+  
+  .popup .content {
+    max-height: 30%;
+    overflow: auto;
+  }
+
+  .pop-up {
+    text-align: center;
+  }
+  .app-name {
+    padding-top: 10px;
+    color: white;
+    text-align: center;
+    font-weight: bold;
+    font-size: 48px;
+  }
+  .submit-link {
+    color:white;
+    font-style: normal;
+    text-decoration: none;
+  }
+  #user-name-input {
+    height: 25px;
+    padding-left: 10px;
+  }
+  ul {
+    background: rgb(235, 235, 235);
+  }
+  li {
+    max-width: 100px;
+  }
+  li:hover{
+    background: rgb(211, 211, 211);
+  }
+  .clear-button {
+    border-radius: 0px;
+    background:rgb(42, 86, 233);
+    color:white;
+    width: 200px;
+    height: 65px;
+    font-size: 24px;
+    border:none;
+  }
+  .clear-button:hover {
+    background:rgb(7, 38, 139);
+    color:white;
   }
 </style>
