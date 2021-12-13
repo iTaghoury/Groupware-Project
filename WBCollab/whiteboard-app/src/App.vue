@@ -268,9 +268,10 @@ export default {
     text-decoration: none;
     cursor: pointer;
     transition: all 0.3s ease-out;
+    background: #7613afdc;
   }
   .button:hover {
-    background: #540781dc;
+    background: #3f0c5cdc;
     color: white;
   }
 
