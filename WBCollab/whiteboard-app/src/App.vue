@@ -24,7 +24,7 @@
           {{ value }}
         </li>
       </ul>
-      <button class="clear-button" @click="clearCanvas(true)">Clear canvas</button>
+      <button class="clear-button" @click="clearCanvas(true)">Clear Whiteboard</button>
       <div
         ref="sketch"
         id="sketch"
@@ -348,6 +348,7 @@ export default {
     height: 65px;
     font-size: 24px;
     border:none;
+    margin-bottom: 10px;
   }
   .clear-button:hover {
     background:rgb(7, 38, 139);
