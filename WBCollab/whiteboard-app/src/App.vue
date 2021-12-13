@@ -262,7 +262,7 @@ export default {
   .button {
     font-size: 1em;
     padding: 10px;
-    color: #540781dc;
+    color: #ffffffdc;
     border: 2px solid #540781dc;
     border-radius: 20px/50px;
     text-decoration: none;
